@@ -1,0 +1,17 @@
+{
+  "name": "prompt-sketchbook",
+  "version": "1.0.0",
+  "description": "Nijijourney Image Prompt Generation Aiding Tool",
+  "type": "module",
+  "scripts": {
+    "build": "echo 'No build step required for ESM custom server'",
+    "start": "node server.mjs",
+    "lint": "echo 'No lint check required'"
+  },
+  "dependencies": {
+    "@google/genai": "^1.17.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20"
+  }
+}

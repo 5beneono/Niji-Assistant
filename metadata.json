@@ -1,0 +1,8 @@
+{
+  "name": "Niji Prompt Sketchbook",
+  "description": "An advanced assistant tool to refine, analyze, decompose and version image generation prompts for Nijijourney.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

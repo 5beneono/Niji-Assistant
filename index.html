@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Prompt Sketchbook</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Prompt Sketchbook</p>
+        </div>
+        <div class="topbar-actions">
+          <button class="ghost-button" id="helpButton" type="button" title="使い方ガイド" style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; padding: 6px 12px; height: 32px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface);">
+            <span>❓</span> 使い方
+          </button>
+          <button class="ghost-button" id="exportButton" type="button" title="すべてのテーマ（保存されている全データ）をJSONファイルとして書き出します" style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; padding: 6px 12px; height: 32px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface);">
+            <span>📤</span> 書き出し
+          </button>
+          <label class="ghost-button file-button" title="JSONファイルから以前に書き出したデータを読み込んで復元します" style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; padding: 6px 12px; height: 32px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); cursor: pointer; margin: 0;">
+            <span>📥</span> 読み込み
+            <input id="importInput" type="file" accept="application/json" />
+          </label>
+          <button class="primary-button" id="newProjectButton" type="button">新規</button>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <aside class="project-rail" aria-label="プロジェクト一覧">
+          <div class="rail-header">
+            <h2>制作テーマ</h2>
+            <span id="projectCount">0</span>
+          </div>
+          <div class="project-list" id="projectList"></div>
+        </aside>
+
+        <section class="work-area">
+          <section class="current-pair" aria-label="最新のアイデアノートと英語プロンプト">
+            <section class="panel seed-panel">
+              <div class="panel-header">
+                <h2>アイデアノート</h2>
+                <span id="savedStatus">未保存</span>
+              </div>
+              <input id="projectTitle" class="title-input" type="text" />
+              <textarea id="originalJa" class="seed-input" spellcheck="false" placeholder="日本語で思いつくシーンやキャラ設定、小物を入力してください..."></textarea>
+              <div class="field-block">
+                <label for="favoriteWordInput">お気に入りワード</label>
+                <div class="favorite-row">
+                  <input id="favoriteWordInput" class="favorite-input" type="text" />
+                  <button id="addFavoriteWordButton" type="button">追加</button>
+                </div>
+                <div id="favoriteWordList" class="word-list"></div>
+              </div>
+
+              <div class="button-row">
+                <button id="saveSeedButton" type="button">保存</button>
+                <button id="analyzeButton" class="primary-button" type="button">プロンプト作成</button>
+                <span id="generationStatus" class="loading-status" aria-live="polite"></span>
+              </div>
+            </section>
+
+            <section class="panel prompt-panel">
+              <div class="panel-header">
+                <div>
+                  <h2>英語プロンプト</h2>
+                  <div class="prompt-meta">
+                    <span id="versionLabel">v1</span>
+                    <span id="phraseSummary">0 phrases</span>
+                  </div>
+                </div>
+                <div class="prompt-actions">
+                  <div class="segmented" role="tablist" aria-label="表示切り替え">
+                    <button class="active" id="showAllButton" type="button">全て</button>
+                    <button id="showReviewButton" type="button">要確認</button>
+                  </div>
+                  <button class="ghost-button" id="copyPromptButton" type="button">コピー</button>
+                </div>
+              </div>
+
+              <textarea id="promptEn" class="prompt-input" spellcheck="false" readonly></textarea>
+
+              <div class="phrase-list" id="phraseList"></div>
+            </section>
+          </section>
+
+          <section class="panel revision-panel">
+            <div class="panel-header">
+              <h2>修正指示</h2>
+              <span>最新セットに反映</span>
+            </div>
+            <textarea id="revisionInput" class="revision-input" spellcheck="false"></textarea>
+            <button id="reviseButton" class="primary-button" type="button">修正案を作る</button>
+          </section>
+
+          <section class="history-area" aria-label="履歴">
+            <section class="panel diff-panel">
+              <div class="panel-header">
+                <h2>差分</h2>
+                <span id="diffStatus">変更なし</span>
+              </div>
+              <div id="diffView" class="diff-view"></div>
+            </section>
+
+            <section class="panel timeline-panel">
+              <div class="panel-header">
+                <h2>タイムライン</h2>
+                <span id="timelineCount">0</span>
+              </div>
+              <div id="timeline" class="timeline"></div>
+            </section>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <template id="projectTemplate">
+      <button class="project-card" type="button">
+        <strong></strong>
+        <span class="project-card-meta"></span>
+      </button>
+    </template>
+
+    <template id="phraseTemplate">
+      <article class="phrase-card">
+        <div class="phrase-card-header">
+          <div>
+            <strong class="phrase-en"></strong>
+            <p class="phrase-ja"></p>
+          </div>
+          <label class="switch">
+            <input type="checkbox" />
+            <span></span>
+          </label>
+        </div>
+        <div class="phrase-tags"></div>
+        <p class="phrase-effect"></p>
+        <p class="phrase-note"></p>
+        <div class="alternatives"></div>
+      </article>
+    </template>
+
+    <!-- 使い方ガイド モーダル -->
+    <div id="helpModal" class="modal-overlay" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Prompt Sketchbook 使い方</h2>
+          <button id="closeHelpBtn" class="close-modal-btn" type="button">&times;</button>
+        </div>
+        <div class="modal-body">
+          <!-- 1分でわかる！使い方まとめ -->
+          <section class="help-section" style="background: rgba(218, 114, 53, 0.05); padding: 16px; border-radius: 8px; border: 1px dashed var(--accent); margin-bottom: 24px;">
+            <h3 style="color: var(--accent); margin-top: 0; display: flex; align-items: center; gap: 6px;">🚀 1分でわかる！簡単な使い方まとめ</h3>
+            <ol class="help-steps" style="padding-left: 18px; margin-bottom: 0;">
+              <li><strong>「新規」</strong>ボタンで新しいテーマを作り、タイトルを入力します。</li>
+              <li>左側の<strong>アイデアノート</strong>に、日本語で自由にイメージや描写を書き込みます。</li>
+              <li><strong>「プロンプト作成」</strong>を押すと、AI（Gemini）が緻密な英語に分解・翻訳します。</li>
+              <li>右側に広がる<strong>句分解カード</strong>のスイッチを切り替え、不要な翻訳や余計なニュアンスを「保留」にして排除します。</li>
+              <li><strong>「コピー」</strong>ボタンを押して、にじじゃーにー（Midjourney）等でそのまま使える英語プロンプトをクリップボードに取得します。</li>
+              <li>さらに微調整したい時は、<strong>修正指示</strong>を書いて「修正案を作る」を押せば、引き継いだ設定で新たなバージョンがタイムラインに生まれます。</li>
+            </ol>
+          </section>
+
+          <!-- 安全なAPI設定手順 -->
+          <section class="help-section">
+            <h3>🔑 Gemini APIキーの安全な設定手順</h3>
+            <p style="margin-bottom: 12px; font-size: 0.88rem; line-height: 1.6; color: var(--muted);">ブラウザにお手元のAPIキーを直接管理する危険性を排除するため、本システムは AI Studio 側のセキュアな管理者シークレット（Secrets）を活用します。</p>
+            <ol class="help-steps">
+              <li>他の人のアプリ（共有されたアプリ）を開いている場合は、まず画面右上にある <strong>「Remix」</strong> ボタンをクリックしてお手元のワークスペースへと複製（フォーク）します。</li>
+              <li>複製完了後、画面右上にある <strong>歯車アイコン（Settings / 設定）</strong> をクリックします。</li>
+              <li>開いた設定パネル内の <strong>「Secrets」</strong> セクションを見つけます。</li>
+              <li>新しいSecretの登録名（Name/Key）に <code>GEMINI_API_KEY</code> と入力します。</li>
+              <li>値（Value）に、Google AI Studio等で取得したご自身の <strong>Gemini APIキー</strong>（<code>AIzaSy...</code>で始まる文字列）を貼り付け保存します。</li>
+              <li>登録が完了すると、アプリの裏側（Node.jsサーバーサイドの <code>process.env.GEMINI_API_KEY</code>）から安全に接続可能となります。</li>
+            </ol>
+            <p style="margin-top: 8px; font-size: 0.8rem; color: var(--muted);">※APIの使いすぎによる料金制限、各データクォータ、セキュリティ面でも、このSecrets経由が最も安全で推奨される構成です。</p>
+          </section>
+
+          <!-- 詳細ガイド -->
+          <section class="help-section">
+            <h3>🎨 これは何をする道具か</h3>
+            <p style="margin-bottom: 12px; font-size: 0.88rem; line-height: 1.6; color: var(--muted);">
+              Prompt Sketchbook は、日本語のアイデアノートから、にじじゃーにー向けの英語プロンプトを作るための道具です。<br>
+              単に丸ごと英訳するだけではなく、AIが追加した表現ディテールを「句（パーツ）」ごとに分解し、それぞれが絵にどう作用するかまで見定めながら、採用・保留をトグル操作で個別にコントロールして磨き上げられます。
+            </p>
+          </section>
+
+          <section class="help-section">
+            <h3>📝 アイデアノートを書く</h3>
+            <p style="margin-bottom: 12px; font-size: 0.88rem; line-height: 1.6; color: var(--muted);">
+              ノートには、まだ整理されていない、脳裏に浮かぶ日本語のイメージを書き散らします。<br>
+              文章として整っていなくても、カンマや改行区切りのキーワード群だけでも問題ありません。
+            </p>
+            <blockquote style="background: var(--surface); padding: 12px; border-left: 4px solid var(--muted); border-radius: 4px; font-size: 0.82rem; line-height: 1.5; color: var(--ink); margin: 0 0 12px 0; font-family: monospace; white-space: pre-wrap;">青いタイルが張られた壁に寄りかかって足を伸ばして座る萌えアニメ少女。
+少女は猫耳で白い長い髪。だらんとした腕、無表情。
+白い床には青い魚が落ちている。
+白いシャツワンピース、華奢な身体。</blockquote>
+          </section>
+
+          <section class="help-section">
+            <h3>⭐️ お気に入りワードを登録する</h3>
+            <p style="margin-bottom: 12px; font-size: 0.88rem; line-height: 1.6; color: var(--muted);">
+              毎回使いたい独自の画風マニフェスト、陰影タッチ、あるいは好みの顔立ちがあれば、あらかじめ登録・お気に入り化します。<br>
+              入力欄に、カンマ、読点、改行等で複数ワードをまとめて流し込み「追加」を押すだけで自動的にタグ化され、プロンプトの末尾に「固定画風プロンプト」として自動結合されます。不要なタグはいつでも「×」ボタンで消去可能です。
+            </p>
+          </section>
+
+          <section class="help-section">
+            <h3>⚡️ プロンプト作成と句分解</h3>
+            <p style="margin-bottom: 12px; font-size: 0.88rem; line-height: 1.6; color: var(--muted);">
+              「プロンプト作成」を押すと、Geminiがイメージ全体の湿度、光線位置、服の素材感等を分析・補完した英語プロンプトに昇華させます。<br>
+              生成された英語パーツには効果の説明と以下の分類ラベルが表示されます。
+            </p>
+            <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem; line-height: 1.5; text-align: left; margin-bottom: 12px;">
+              <thead>
+                <tr style="border-bottom: 2px solid var(--line);">
+                  <th style="padding: 6px; font-weight: 700;">ラベル</th>
+                  <th style="padding: 6px; font-weight: 700;">意図・説明</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="border-bottom: 1px solid var(--line);">
+                  <td style="padding: 6px; font-weight: 700; color: var(--accent);">原文対応</td>
+                  <td style="padding: 6px;">あなたが日本語アイデアに明示的に書いていた要素の英訳。</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--line);">
+                  <td style="padding: 6px; font-weight: 700; color: var(--ink);">翻訳補完</td>
+                  <td style="padding: 6px;">英語構文として絵を自然に繋ぐために補われた接続。</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--line);">
+                  <td style="padding: 6px; font-weight: 700; color: var(--ink);">表現強化</td>
+                  <td style="padding: 6px;">質感、光効果、描画密度、構図的迫力を高める補正。</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--line);">
+                  <td style="padding: 6px; font-weight: 700; color: var(--ink);">解釈追加</td>
+                  <td style="padding: 6px;">AI側がその場面や物語性の裏側から読み取って肉付けした視覚表現。</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--line);">
+                  <td style="padding: 6px; font-weight: 700; color: var(--muted);">分岐語 / 要確認</td>
+                  <td style="padding: 6px;">全体の方向性に劇的な揺らぎを与える可能性があり、確認すべき語句。</td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section class="help-section">
+            <h3>🔄 修正指示とタイムライン（履歴）</h3>
+            <p style="margin-bottom: 12px; font-size: 0.88rem; line-height: 1.6; color: var(--muted);">
+              「もう少し全体をサイバーパンク寄りに」「退廃的な空気はいらない」「落ちている魚の存在感を強めて」など、ニュアンスの変更方向をそのまま入力して<strong>「修正案を作る」</strong>。旧バージョン時のトグルON/OFF状態を引き継ぎながら、タイムラインに差分付きの新版がプロットされます。
+            </p>
+          </section>
+
+          <section class="help-section">
+            <h3>💾 データの保存とエクスポート</h3>
+            <p style="margin-bottom: 12px; font-size: 0.88rem; line-height: 1.6; color: var(--muted);">
+              アプリで作成したプロジェクト群は、お使いのブラウザの <code>localStorage</code> に安全に自動保存されます。<br>
+              別のPCへ移行する場合や、バックアップを取りたい場合は、画面右上の「↓（書き出し）」ボタンでJSONファイルをダウンロードし、移行先で「↑（読み込み）」ボタンをクリックしてデータをまるごと復元していただけます。
+            </p>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
