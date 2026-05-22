@@ -14,20 +14,22 @@
         </div>
         <div class="topbar-actions">
           <button class="ghost-button" id="helpButton" type="button" title="使い方ガイド" style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; padding: 6px 12px; height: 32px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface);">
-            <span>❓</span> 使い方
+            <span>❓</span><span class="btn-text">使い方</span>
           </button>
           <button class="ghost-button" id="exportButton" type="button" title="すべてのテーマ（保存されている全データ）をJSONファイルとして書き出します" style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; padding: 6px 12px; height: 32px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface);">
-            <span>📤</span> 書き出し
+            <span>📤</span><span class="btn-text">書き出し</span>
           </button>
           <label class="ghost-button file-button" title="JSONファイルから以前に書き出したデータを読み込んで復元します" style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; padding: 6px 12px; height: 32px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); cursor: pointer; margin: 0;">
-            <span>📥</span> 読み込み
+            <span>📥</span><span class="btn-text">読み込み</span>
             <input id="importInput" type="file" accept="application/json" />
           </label>
-          <button class="primary-button" id="newProjectButton" type="button">新規</button>
+          <button class="primary-button" id="newProjectButton" type="button" style="display: flex; align-items: center; gap: 6px; height: 32px; padding: 6px 12px;">
+            <span>➕</span><span class="btn-text">新規</span>
+          </button>
         </div>
       </header>
 
-      <section class="workspace">
+      <section class="workspace active-tab-seed">
         <aside class="project-rail" aria-label="プロジェクト一覧">
           <div class="rail-header">
             <h2>制作テーマ</h2>
@@ -37,6 +39,11 @@
         </aside>
 
         <section class="work-area">
+          <div class="mobile-tabs" role="tablist">
+            <button class="mobile-tab" id="mobileTabProjects" type="button">📂 テーマ</button>
+            <button class="mobile-tab active" id="mobileTabSeed" type="button">📝 ノート</button>
+            <button class="mobile-tab" id="mobileTabPrompt" type="button">🎨 プロンプト</button>
+          </div>
           <section class="current-pair" aria-label="最新のアイデアノートと英語プロンプト">
             <section class="panel seed-panel">
               <div class="panel-header">
@@ -44,12 +51,25 @@
                 <span id="savedStatus">未保存</span>
               </div>
               <input id="projectTitle" class="title-input" type="text" />
+              <div class="field-block intention-block">
+                <div class="field-label-row">
+                  <label for="intention">見たいもの</label>
+                  <span class="char-counter" id="intentionCounter">0 / 50字</span>
+                </div>
+                <input id="intention" class="intention-input" type="text" placeholder="例: 悪の無垢の瞬間 / 光が痛い瞬間 / 涙が絵の具になる瞬間" maxlength="150" />
+                <p class="field-help-text">絵で最大化したい一つの感覚を、欲望ベースで一行で</p>
+              </div>
               <textarea id="originalJa" class="seed-input" spellcheck="false" placeholder="日本語で思いつくシーンやキャラ設定、小物を入力してください..."></textarea>
               <div class="field-block">
-                <label for="favoriteWordInput">お気に入りワード</label>
-                <div class="favorite-row">
-                  <input id="favoriteWordInput" class="favorite-input" type="text" />
-                  <button id="addFavoriteWordButton" type="button">追加</button>
+                <div class="field-label-row">
+                  <label for="favoriteWordInput">お気に入りワード</label>
+                  <button id="toggleFavoriteFormBtn" class="toggle-link-btn" type="button">➕ お気に入りワードを追加</button>
+                </div>
+                <div id="favoriteFormContainer" class="favorite-form-container hidden">
+                  <div class="favorite-row">
+                    <input id="favoriteWordInput" class="favorite-input" type="text" placeholder="カンマ(,)区切りで追加できます" />
+                    <button id="addFavoriteWordButton" class="ghost-button" type="button">追加</button>
+                  </div>
                 </div>
                 <div id="favoriteWordList" class="word-list"></div>
               </div>
@@ -57,11 +77,10 @@
               <div class="button-row">
                 <button id="saveSeedButton" type="button">保存</button>
                 <button id="analyzeButton" class="primary-button" type="button">プロンプト作成</button>
-                <span id="generationStatus" class="loading-status" aria-live="polite"></span>
               </div>
             </section>
 
-            <section class="panel prompt-panel">
+            <section class="panel prompt-panel mobile-hidden">
               <div class="panel-header">
                 <div>
                   <h2>英語プロンプト</h2>
@@ -74,6 +93,7 @@
                   <div class="segmented" role="tablist" aria-label="表示切り替え">
                     <button class="active" id="showAllButton" type="button">全て</button>
                     <button id="showReviewButton" type="button">要確認</button>
+                    <button id="showLowContribButton" type="button" class="hidden">貢献度低</button>
                   </div>
                   <button class="ghost-button" id="copyPromptButton" type="button">コピー</button>
                 </div>
@@ -90,19 +110,16 @@
               <h2>修正指示</h2>
               <span>最新セットに反映</span>
             </div>
+            <div id="intentionShortcutContainer" class="intention-shortcut-container hidden">
+              <button id="intentionShortcutBtn" class="shortcut-btn" type="button">
+                💡 「見たいもの」から外れた句を弱める
+              </button>
+            </div>
             <textarea id="revisionInput" class="revision-input" spellcheck="false"></textarea>
             <button id="reviseButton" class="primary-button" type="button">修正案を作る</button>
           </section>
 
           <section class="history-area" aria-label="履歴">
-            <section class="panel diff-panel">
-              <div class="panel-header">
-                <h2>差分</h2>
-                <span id="diffStatus">変更なし</span>
-              </div>
-              <div id="diffView" class="diff-view"></div>
-            </section>
-
             <section class="panel timeline-panel">
               <div class="panel-header">
                 <h2>タイムライン</h2>
@@ -135,6 +152,10 @@
           </label>
         </div>
         <div class="phrase-tags"></div>
+        <div class="phrase-contribution hidden">
+          <span class="contribution-badge"></span>
+          <p class="contribution-note"></p>
+        </div>
         <p class="phrase-effect"></p>
         <p class="phrase-note"></p>
         <div class="alternatives"></div>

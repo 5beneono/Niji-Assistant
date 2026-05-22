@@ -57,6 +57,11 @@ const els = {
   projectList: document.querySelector("#projectList"),
   projectCount: document.querySelector("#projectCount"),
   projectTitle: document.querySelector("#projectTitle"),
+  intention: document.querySelector("#intention"),
+  intentionCounter: document.querySelector("#intentionCounter"),
+  showLowContribButton: document.querySelector("#showLowContribButton"),
+  intentionShortcutContainer: document.querySelector("#intentionShortcutContainer"),
+  intentionShortcutBtn: document.querySelector("#intentionShortcutBtn"),
   originalJa: document.querySelector("#originalJa"),
   favoriteWordInput: document.querySelector("#favoriteWordInput"),
   addFavoriteWordButton: document.querySelector("#addFavoriteWordButton"),
@@ -80,6 +85,13 @@ const els = {
   helpButton: document.querySelector("#helpButton"),
   helpModal: document.querySelector("#helpModal"),
   closeHelpBtn: document.querySelector("#closeHelpBtn"),
+
+  // Mobile Tabs Setup
+  mobileTabProjects: document.querySelector("#mobileTabProjects"),
+  mobileTabSeed: document.querySelector("#mobileTabSeed"),
+  mobileTabPrompt: document.querySelector("#mobileTabPrompt"),
+  workspace: document.querySelector(".workspace"),
+  currentPair: document.querySelector(".current-pair"),
 };
 
 document.querySelector("#newProjectButton").addEventListener("click", createProject);
@@ -92,11 +104,42 @@ document.querySelector("#exportButton").addEventListener("click", exportJson);
 document.querySelector("#importInput").addEventListener("change", importJson);
 document.querySelector("#showAllButton").addEventListener("click", () => setPhraseFilter("all"));
 document.querySelector("#showReviewButton").addEventListener("click", () => setPhraseFilter("review"));
+document.querySelector("#showLowContribButton").addEventListener("click", () => setPhraseFilter("low_contrib"));
 
-["projectTitle", "originalJa"].forEach((id) => {
-  document.querySelector(`#${id}`).addEventListener("input", () => {
-    els.savedStatus.textContent = "未保存";
+function updateIntentionCounter() {
+  if (els.intention && els.intentionCounter) {
+    const len = els.intention.value.length;
+    els.intentionCounter.textContent = `${len} / 50字`;
+    if (len > 50) {
+      els.intentionCounter.style.color = "var(--accent)";
+    } else {
+      els.intentionCounter.style.color = "var(--muted)";
+    }
+  }
+}
+
+if (els.intentionShortcutBtn && els.revisionInput) {
+  els.intentionShortcutBtn.addEventListener("click", () => {
+    const shortcutText = "「見たいもの」から外れた句を弱めてください。";
+    if (els.revisionInput.value.includes(shortcutText)) return;
+    if (els.revisionInput.value.trim() === "") {
+      els.revisionInput.value = shortcutText;
+    } else {
+      els.revisionInput.value += "\n" + shortcutText;
+    }
   });
+}
+
+["projectTitle", "intention", "originalJa"].forEach((id) => {
+  const el = document.querySelector(`#${id}`);
+  if (el) {
+    el.addEventListener("input", () => {
+      els.savedStatus.textContent = "未保存";
+      if (id === "intention") {
+        updateIntentionCounter();
+      }
+    });
+  }
 });
 
 els.favoriteWordInput.addEventListener("keydown", (event) => {
@@ -105,6 +148,96 @@ els.favoriteWordInput.addEventListener("keydown", (event) => {
     addFavoriteWordsFromInput();
   }
 });
+
+// Toggle Favorite Form
+const toggleFavoriteFormBtn = document.querySelector("#toggleFavoriteFormBtn");
+const favoriteFormContainer = document.querySelector("#favoriteFormContainer");
+if (toggleFavoriteFormBtn && favoriteFormContainer) {
+  toggleFavoriteFormBtn.addEventListener("click", () => {
+    const isHidden = favoriteFormContainer.classList.contains("hidden");
+    if (isHidden) {
+      favoriteFormContainer.classList.remove("hidden");
+      toggleFavoriteFormBtn.textContent = "➖ 閉じる";
+    } else {
+      favoriteFormContainer.classList.add("hidden");
+      toggleFavoriteFormBtn.textContent = "➕ お気に入りワードを追加";
+    }
+  });
+}
+
+// Bind Mobile Tabs & Swipe events
+if (els.mobileTabProjects) {
+  els.mobileTabProjects.addEventListener("click", () => switchMobileTab("projects"));
+}
+if (els.mobileTabSeed) {
+  els.mobileTabSeed.addEventListener("click", () => switchMobileTab("seed"));
+}
+if (els.mobileTabPrompt) {
+  els.mobileTabPrompt.addEventListener("click", () => switchMobileTab("prompt"));
+}
+
+let currentMobileTab = "seed";
+
+function switchMobileTab(tabName) {
+  currentMobileTab = tabName;
+  if (els.workspace) {
+    els.workspace.classList.remove("active-tab-projects", "active-tab-seed", "active-tab-prompt");
+    els.workspace.classList.add(`active-tab-${tabName}`);
+  }
+  if (els.mobileTabProjects) {
+    els.mobileTabProjects.classList.toggle("active", tabName === "projects");
+  }
+  if (els.mobileTabSeed) {
+    els.mobileTabSeed.classList.toggle("active", tabName === "seed");
+  }
+  if (els.mobileTabPrompt) {
+    els.mobileTabPrompt.classList.toggle("active", tabName === "prompt");
+  }
+}
+
+let touchStartX = 0;
+let touchStartY = 0;
+let touchEndX = 0;
+let touchEndY = 0;
+
+if (els.workspace) {
+  els.workspace.addEventListener("touchstart", (e) => {
+    if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT" || e.target.closest("textarea") || e.target.closest("input")) return;
+    touchStartX = e.changedTouches[0].screenX;
+    touchStartY = e.changedTouches[0].screenY;
+  }, { passive: true });
+
+  els.workspace.addEventListener("touchend", (e) => {
+    if (e.target.tagName === "TEXTAREA" || e.target.tagName === "INPUT" || e.target.closest("textarea") || e.target.closest("input")) return;
+    touchEndX = e.changedTouches[0].screenX;
+    touchEndY = e.changedTouches[0].screenY;
+    handleSwipe();
+  }, { passive: true });
+}
+
+function handleSwipe() {
+  if (window.innerWidth > 760) return;
+  const diffX = touchEndX - touchStartX;
+  const diffY = touchEndY - touchStartY;
+  
+  if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 60) {
+    if (diffX < 0) {
+      // Swipe left -> Next tab
+      if (currentMobileTab === "projects") {
+        switchMobileTab("seed");
+      } else if (currentMobileTab === "seed") {
+        switchMobileTab("prompt");
+      }
+    } else {
+      // Swipe right -> Previous tab
+      if (currentMobileTab === "prompt") {
+        switchMobileTab("seed");
+      } else if (currentMobileTab === "seed") {
+        switchMobileTab("projects");
+      }
+    }
+  }
+}
 
 // Bind Help Modal events
 if (els.helpButton && els.helpModal && els.closeHelpBtn) {
@@ -151,10 +284,33 @@ function loadState() {
 
 function normalizeState(nextState) {
   const projects = (nextState.projects ?? []).map(normalizeProject);
+
+  let commonWords = [];
+  if (Array.isArray(nextState.commonFavoriteWords)) {
+    commonWords = nextState.commonFavoriteWords;
+  } else {
+    const allWords = [];
+    projects.forEach((p) => {
+      if (Array.isArray(p.favoriteWords)) {
+        allWords.push(...p.favoriteWords);
+      }
+    });
+    commonWords = allWords;
+  }
+
+  const commonFavoriteWords = normalizeFavoriteWords(commonWords);
+
+  // Sync back to every project
+  projects.forEach((p) => {
+    p.favoriteWords = [...commonFavoriteWords];
+    p.stylePrompt = buildFavoritePrompt(p);
+  });
+
   return {
     schemaVersion: DATA_SCHEMA_VERSION,
     activeProjectId: nextState.activeProjectId ?? projects[0]?.id,
     projects,
+    commonFavoriteWords,
   };
 }
 
@@ -163,6 +319,7 @@ function normalizeProject(project) {
   return {
     id: project.id ?? createId(),
     title: project.title ?? "無題",
+    intention: project.intention ?? "",
     originalJa: project.originalJa ?? "",
     stylePrompt: favoriteWords.join(", "),
     favoriteWords,
@@ -194,6 +351,7 @@ function normalizePromptVersion(version, project, index) {
     id: version.id ?? createId(),
     version: Number(version.version ?? index + 1),
     kind: version.kind ?? (version.instruction ? "revision" : "generation"),
+    intention: version.intention ?? project.intention ?? "",
     originalJa: version.originalJa ?? project.originalJa ?? "",
     promptEn: version.promptEn ?? "",
     phrases: (version.phrases ?? []).map(normalizePhrase),
@@ -217,6 +375,8 @@ function normalizePhrase(phrase) {
     note: String(phrase.note ?? ""),
     alternatives: Array.isArray(phrase.alternatives) ? phrase.alternatives.map(String) : [],
     adopted: phrase.adopted !== false,
+    contribution_note: String(phrase.contribution_note ?? phrase.contributionNote ?? ""),
+    contribution_level: String(phrase.contribution_level ?? phrase.contributionLevel ?? "high"),
   };
 }
 
@@ -272,6 +432,7 @@ function renderProjectList(activeProject) {
       activeProjectId = project.id;
       lastDiff = [];
       render();
+      switchMobileTab("seed");
     });
     els.projectList.appendChild(template);
   });
@@ -280,11 +441,23 @@ function renderProjectList(activeProject) {
 function renderEditor(project) {
   const latest = getLatestVersion(project);
   els.projectTitle.value = project.title;
+  if (els.intention) {
+    els.intention.value = project.intention ?? "";
+  }
+  updateIntentionCounter();
   els.originalJa.value = project.originalJa;
   els.promptEn.value = latest?.promptEn ?? "";
   els.versionLabel.textContent = latest ? `v${latest.version}` : "v0";
   els.phraseSummary.textContent = `${latest?.phrases?.length ?? 0} phrases`;
   els.savedStatus.textContent = "保存済み";
+
+  const hasIntention = !!project.intention && project.intention.trim().length > 0;
+  if (els.showLowContribButton) {
+    els.showLowContribButton.classList.toggle("hidden", !hasIntention);
+  }
+  if (els.intentionShortcutContainer) {
+    els.intentionShortcutContainer.classList.toggle("hidden", !hasIntention);
+  }
 }
 
 function renderFavoriteWords(project) {
@@ -305,8 +478,11 @@ function renderFavoriteWords(project) {
     removeButton.textContent = "×";
     removeButton.setAttribute("aria-label", `${word}を削除`);
     removeButton.addEventListener("click", () => {
-      project.favoriteWords = project.favoriteWords.filter((item) => item !== word);
-      project.stylePrompt = buildFavoritePrompt(project);
+      state.commonFavoriteWords = state.commonFavoriteWords.filter((item) => item !== word);
+      state.projects.forEach((p) => {
+        p.favoriteWords = [...state.commonFavoriteWords];
+        p.stylePrompt = buildFavoritePrompt(p);
+      });
       project.updatedAt = new Date().toISOString();
       els.savedStatus.textContent = "未保存";
       render();
@@ -320,7 +496,30 @@ function renderFavoriteWords(project) {
 function renderPhrases(project) {
   const latest = getLatestVersion(project);
   const phrases = latest?.phrases ?? [];
-  const visible = phraseFilter === "review" ? phrases.filter(isReviewPhrase) : phrases;
+  const hasIntention = !!project.intention && project.intention.trim().length > 0;
+
+  // フィルター処理
+  let visible = phrases;
+  if (phraseFilter === "review") {
+    visible = phrases.filter(isReviewPhrase);
+  } else if (phraseFilter === "low_contrib") {
+    if (hasIntention) {
+      visible = phrases.filter((phrase) => phrase.contribution_level === "low");
+    } else {
+      phraseFilter = "all";
+      visible = phrases;
+    }
+  }
+
+  // フィルターボタンのアクティブ表現トグル
+  document.querySelector("#showAllButton").classList.toggle("active", phraseFilter === "all");
+  document.querySelector("#showReviewButton").classList.toggle("active", phraseFilter === "review");
+  const lowBtn = document.querySelector("#showLowContribButton");
+  if (lowBtn) {
+    lowBtn.classList.toggle("active", phraseFilter === "low_contrib");
+    lowBtn.classList.toggle("hidden", !hasIntention);
+  }
+
   els.phraseList.innerHTML = "";
 
   if (!visible.length) {
@@ -371,6 +570,27 @@ function renderPhrases(project) {
       alternatives.appendChild(chip);
     });
 
+    // 貢献度メモ欄の描画
+    const contribSection = card.querySelector(".phrase-contribution");
+    const hasContrib = !!phrase.contribution_note && phrase.contribution_note.trim().length > 0;
+    if (contribSection) {
+      if (hasIntention && hasContrib) {
+        contribSection.classList.remove("hidden");
+        const badge = contribSection.querySelector(".contribution-badge");
+        if (badge) {
+          const level = phrase.contribution_level || "high";
+          badge.textContent = level === "high" ? "貢献度：高" : level === "medium" ? "貢献度：中" : "貢献度：低";
+          badge.className = `contribution-badge contribution-badge-${level}`;
+        }
+        const noteEl = contribSection.querySelector(".contribution-note");
+        if (noteEl) {
+          noteEl.textContent = phrase.contribution_note;
+        }
+      } else {
+        contribSection.classList.add("hidden");
+      }
+    }
+
     els.phraseList.appendChild(template);
   });
 }
@@ -391,43 +611,147 @@ function renderTimeline(project) {
     .forEach((version) => {
       const node = document.createElement("article");
       node.className = "timeline-item timeline-version";
-      const instruction = version.instruction ? `<p><b>修正指示</b>${escapeHtml(version.instruction)}</p>` : "";
+
+      const instruction = version.instruction
+        ? `<p class="timeline-meta-row"><b>修正指示:</b> ${escapeHtml(version.instruction)}</p>`
+        : "";
+
+      const intentionHtml = version.intention
+        ? `<p class="timeline-meta-row"><b>見たいもの:</b> <span style="font-style: italic; color: var(--accent); font-weight: 500;">${escapeHtml(version.intention)}</span></p>`
+        : "";
+
+      // 前のバージョンと見たいものが変更されたか検知する
+      const previousVersion = versions.find((v) => v.version === version.version - 1);
+      let intentionDiffHtml = "";
+      if (previousVersion && (previousVersion.intention ?? "").trim() !== (version.intention ?? "").trim()) {
+        const prevInt = (previousVersion.intention ?? "").trim();
+        const currInt = (version.intention ?? "").trim();
+        intentionDiffHtml = `
+          <div style="margin-top: 6px; border: 1px dashed var(--line); border-radius: 4px; padding: 6px 8px; background: rgba(218, 114, 53, 0.03);">
+            <strong style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px;">⚠️ 「見たいもの」の変更</strong>
+            ${prevInt ? `<span class="diff-line remove" style="display:block; font-size:12px;">- ${escapeHtml(prevInt)}</span>` : ""}
+            ${currInt ? `<span class="diff-line add" style="display:block; font-size:12px;">+ ${escapeHtml(currInt)}</span>` : ""}
+          </div>
+        `;
+      }
+
+      const diffLines = version.diff ?? [];
+      let diffHtml = "";
+      if (diffLines.length) {
+        diffHtml = `
+          <div class="timeline-diff">
+            <details>
+              <summary>変更差分 (${diffLines.length / 2}件)</summary>
+              <div class="diff-view">
+                ${diffLines
+                  .map(
+                    (line) =>
+                      `<span class="diff-line ${line.type}">${
+                        line.type === "add" ? "+" : "-"
+                      } ${escapeHtml(line.text)}</span>`
+                  )
+                  .join("")}
+              </div>
+            </details>
+          </div>
+        `;
+      } else if (version.version === 1) {
+        diffHtml = `
+          <div class="timeline-diff">
+            <div class="diff-view">
+              <span class="diff-line add">新規作成されたプロンプトです</span>
+            </div>
+          </div>
+        `;
+      }
+
       node.innerHTML = `
-        <strong>v${version.version}</strong>
-        <p><b>アイデアノート</b>${escapeHtml(compactText(version.originalJa ?? project.originalJa))}</p>
-        <p><b>英語プロンプト</b>${escapeHtml(compactText(version.promptEn))}</p>
-        ${instruction}
+        <div class="timeline-header">
+          <strong>v${version.version}</strong>
+          <button class="restore-button" type="button">
+            ↩ このバージョンに戻る
+          </button>
+        </div>
+        <div class="timeline-body">
+          ${intentionHtml}
+          <p class="timeline-meta-row"><b>アイデアノート (日本語):</b><br><span class="compact-text">${escapeHtml(
+            compactText(version.originalJa ?? project.originalJa)
+          )}</span></p>
+          <p class="timeline-meta-row"><b>英語プロンプト:</b><br><span class="compact-text">${escapeHtml(
+            compactText(version.promptEn)
+          )}</span></p>
+          ${instruction}
+          ${intentionDiffHtml}
+          ${diffHtml}
+        </div>
       `;
+
+      const restoreBtn = node.querySelector(".restore-button");
+      if (restoreBtn) {
+        restoreBtn.addEventListener("click", () => {
+          restoreVersion(version.version);
+        });
+      }
+
       els.timeline.appendChild(node);
     });
 }
 
-function renderDiff() {
-  const latest = getLatestVersion();
-  const diffLines = lastDiff.length ? lastDiff : latest?.diff ?? [];
-  els.diffView.innerHTML = "";
-  els.diffStatus.textContent = diffLines.length ? `${diffLines.length / 2} changes` : "変更なし";
+function restoreVersion(versionNum) {
+  const project = getActiveProject();
+  const targetVersion = project.promptVersions.find((v) => v.version === versionNum);
+  if (!targetVersion) return;
 
-  if (!diffLines.length) {
-    els.diffView.innerHTML = `<span>変更差分はまだありません</span>`;
-    return;
+  const newVersion = createPromptVersion(project, {
+    kind: "revision",
+    promptEn: targetVersion.promptEn,
+    phrases: targetVersion.phrases.map(clonePhrase),
+    instruction: `v${targetVersion.version} の履歴からの復元`,
+    diff: [],
+    summary: `v${targetVersion.version} の状態を復元しました。`,
+    niji_suggestions: targetVersion.niji_suggestions ? { ...targetVersion.niji_suggestions } : null,
+  });
+
+  if (targetVersion.originalJa !== undefined) {
+    project.originalJa = targetVersion.originalJa;
+  }
+  if (targetVersion.intention !== undefined) {
+    project.intention = targetVersion.intention;
   }
 
-  diffLines.forEach((line) => {
-    const span = document.createElement("span");
-    span.className = `diff-line ${line.type}`;
-    span.textContent = `${line.type === "add" ? "+" : "-"} ${line.text}`;
-    els.diffView.appendChild(span);
-  });
+  // アクティブな入力欄を更新する
+  if (els.intention) {
+    els.intention.value = project.intention;
+  }
+  updateIntentionCounter();
+
+  project.promptVersions.push(newVersion);
+  project.revisionTimeline.push(
+    createActivity({
+      type: "revision",
+      title: `v${newVersion.version} 復元`,
+      body: `v${targetVersion.version} の状態を復元しました。`,
+    })
+  );
+
+  project.updatedAt = new Date().toISOString();
+  lastDiff = [];
+  render();
+  switchMobileTab("prompt");
+}
+
+function renderDiff() {
+  // 差分表示パネルはタイムラインに完全に統合されたため、何もしません
 }
 
 function createProject() {
   const project = {
     id: createId(),
     title: "新しい制作テーマ",
+    intention: "",
     originalJa: "",
-    stylePrompt: "",
-    favoriteWords: [],
+    stylePrompt: buildFavoritePrompt({ favoriteWords: state.commonFavoriteWords }),
+    favoriteWords: [...state.commonFavoriteWords],
     promptVersions: [],
     revisionTimeline: [
       createActivity({
@@ -443,11 +767,13 @@ function createProject() {
   activeProjectId = project.id;
   lastDiff = [];
   render();
+  switchMobileTab("seed");
 }
 
 function saveSeed() {
   const project = getActiveProject();
   project.title = els.projectTitle.value.trim() || "無題";
+  project.intention = els.intention.value.trim();
   project.originalJa = els.originalJa.value.trim();
   project.stylePrompt = buildFavoritePrompt(project);
   project.updatedAt = new Date().toISOString();
@@ -489,6 +815,7 @@ async function analyzePrompt() {
     project.updatedAt = new Date().toISOString();
     lastDiff = [];
     render();
+    switchMobileTab("prompt");
   } finally {
     setBusy("generation", false);
   }
@@ -523,6 +850,7 @@ async function generatePromptAnalysis(project) {
 function buildLlmRequest(project) {
   return {
     task: "niji_prompt_phrase_audit",
+    intention: project.intention || "",
     original_ja: project.originalJa,
     instructions: [
       "あなたは、にじじゃーにー向け英語プロンプトの編集者です。",
@@ -691,6 +1019,7 @@ async function revisePrompt() {
     lastDiff = revision.diff;
     els.revisionInput.value = "";
     render();
+    switchMobileTab("prompt");
   } finally {
     setBusy("revision", false);
   }
@@ -725,6 +1054,7 @@ async function generatePromptRevision(project, previousVersion, instruction) {
 function buildRevisionLlmRequest(project, previousVersion, instruction) {
   return {
     task: "niji_prompt_revision",
+    intention: project.intention || "",
     original_ja: project.originalJa,
     fixed_style_prompt: project.stylePrompt,
     revision_instruction: instruction,
@@ -862,7 +1192,13 @@ function normalizeDiff(value, beforePrompt, afterPrompt) {
 function buildPromptAnalysis(project) {
   const text = project.originalJa;
   const phrases = [];
-  const addPhrase = (phrase) => phrases.push({ adopted: true, alternatives: [], ...phrase });
+  const addPhrase = (phrase) => phrases.push({
+    adopted: true,
+    alternatives: [],
+    contribution_note: project.intention ? `「${project.intention}」に貢献: 原文に即した重要な視覚表現` : "",
+    contribution_level: "high",
+    ...phrase,
+  });
 
   if (matches(text, ["猫耳", "ねこ耳"])) {
     addPhrase({
@@ -1135,7 +1471,12 @@ function buildRevision(version, instruction) {
   }
 
   let promptEn = version.promptEn;
-  const phrases = version.phrases.map((phrase) => ({ ...phrase, alternatives: [...phrase.alternatives] }));
+  const phrases = version.phrases.map((phrase) => ({
+    ...phrase,
+    alternatives: [...phrase.alternatives],
+    contribution_note: phrase.contribution_note ?? "",
+    contribution_level: phrase.contribution_level ?? "high",
+  }));
   const diff = [];
   replacements.forEach(([from, to]) => {
     promptEn = promptEn.replace(from, to);
@@ -1212,16 +1553,29 @@ function setPhraseFilter(nextFilter) {
   phraseFilter = nextFilter;
   document.querySelector("#showAllButton").classList.toggle("active", nextFilter === "all");
   document.querySelector("#showReviewButton").classList.toggle("active", nextFilter === "review");
+  const lowBtn = document.querySelector("#showLowContribButton");
+  if (lowBtn) {
+    lowBtn.classList.toggle("active", nextFilter === "low_contrib");
+  }
   renderPhrases(getActiveProject());
 }
 
 function addFavoriteWordsFromInput() {
   const project = getActiveProject();
-  project.favoriteWords = normalizeFavoriteWords([
-    ...project.favoriteWords,
-    ...splitPromptPhrases(els.favoriteWordInput.value),
+  const wordsToAdd = splitPromptPhrases(els.favoriteWordInput.value);
+  if (!wordsToAdd.length) return;
+
+  state.commonFavoriteWords = normalizeFavoriteWords([
+    ...state.commonFavoriteWords,
+    ...wordsToAdd,
   ]);
-  project.stylePrompt = buildFavoritePrompt(project);
+
+  // Sync to all projects
+  state.projects.forEach((p) => {
+    p.favoriteWords = [...state.commonFavoriteWords];
+    p.stylePrompt = buildFavoritePrompt(p);
+  });
+
   project.updatedAt = new Date().toISOString();
   els.favoriteWordInput.value = "";
   els.savedStatus.textContent = "未保存";
@@ -1231,11 +1585,13 @@ function addFavoriteWordsFromInput() {
 function setBusy(kind, isBusy) {
   els.analyzeButton.disabled = isBusy;
   els.reviseButton.disabled = isBusy;
-  els.generationStatus.textContent = isBusy
-    ? kind === "revision"
-      ? "修正案を作成中..."
-      : "生成中..."
-    : "";
+  if (els.generationStatus) {
+    els.generationStatus.textContent = isBusy
+      ? kind === "revision"
+        ? "修正案を作成中..."
+        : "生成中..."
+      : "";
+  }
   els.analyzeButton.textContent = isBusy && kind === "generation" ? "生成中..." : "プロンプト作成";
   els.reviseButton.textContent = isBusy && kind === "revision" ? "作成中..." : "修正案を作る";
 }

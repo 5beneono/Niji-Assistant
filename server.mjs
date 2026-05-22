@@ -98,19 +98,36 @@ async function handleGeneratePrompt(request, response) {
 
 function createSystemInstruction(payload) {
   const joined = Array.isArray(payload.instructions) ? payload.instructions.join("\n") : "";
-  return [
+  const baseInstructions = [
     joined,
     "必ずJSON Schemaに合致するJSONだけを返してください。",
     "labelsは指定された分類ラベル（'原文対応', '翻訳補完', '表現強化', '解釈追加', '分岐語', '要確認'）だけを使ってください。",
     "表現強化と解釈追加では、抽象的な高品質ワードではなく、温度、湿度、身体の接地、肌、髪、まつ毛、布、床、壁、光、素材感、象徴性などの具体的な視覚語を優先してください。",
     "ユーザーは後から削れるため、追加候補は控えめにしすぎず、世界を想像して多めに出してください。",
-  ].join("\n");
+  ];
+
+  if (payload.intention && payload.intention.trim()) {
+    baseInstructions.push(
+      `【絵全体の最優先基準（見たいもの）】`,
+      `絵の核となる意図（ユーザーが最大化したい瞬間や感覚）: "${payload.intention}"`,
+      "1. 各句がこの「見たいもの（意図）」にどう貢献しているか、または貢献していないかを評価し、`contribution_note`（一行：目安10〜30字）と、貢献度を表す `contribution_level`（\"high\" / \"medium\" / \"low\"）を決定してください。",
+      "2. 新しいプロンプト・句の作成にあたっては、この意図を強化する方向で構成し、無関係な装飾は控えてください。",
+      "3. `contribution_note` の記述例:「[見たいもののキーワード]に貢献: [理由]」や「貢献度低: [不要な理由]」のように明記してください。",
+      "4. もし修正指示を伴う場合、この「見たいもの」を最優先の基準として修正・取捨選択してください。ただし、ユーザーの具体的な修正指示と「見たいもの」が矛盾する場合、ユーザーの具体的な指示を優先してください。その際、矛盾していることに対する評価や補足をその句の `contribution_note` に書き残しても構いません。"
+    );
+  } else {
+    baseInstructions.push(
+      "現在、絵の最優先基準である「見たいもの（intention）」は指定されていません（空文字列）。そのため、各句の `contribution_note` は空文字列（\"\"）とし、`contribution_level` は \"high\" として出力してください。"
+    );
+  }
+
+  return baseInstructions.join("\n");
 }
 
 function createResponseSchema(includeDiff) {
   const phraseSchema = {
     type: Type.OBJECT,
-    required: ["phrase", "ja", "labels", "effect", "note", "alternatives", "adopted"],
+    required: ["phrase", "ja", "labels", "effect", "note", "alternatives", "adopted", "contribution_note", "contribution_level"],
     properties: {
       phrase: { type: Type.STRING },
       ja: { type: Type.STRING },
@@ -125,6 +142,8 @@ function createResponseSchema(includeDiff) {
         items: { type: Type.STRING },
       },
       adopted: { type: Type.BOOLEAN },
+      contribution_note: { type: Type.STRING },
+      contribution_level: { type: Type.STRING, enum: ["high", "medium", "low"] },
     },
   };
 
