@@ -1,55 +1,50 @@
 # Niji Assistant / Prompt Sketchbook
 
-日本語の「アイデアノート」から、**にじ系画像生成向けの英語プロンプト**を作り、句ごとに解体・採否管理できるローカルWebアプリです。
+Niji Assistant / Prompt Sketchbook は、日本語のアイデアノートを入力として、画像生成向け英語プロンプトを生成・分解・改稿するローカルWebアプリケーションです。
 
-> 便利ツールとしてではなく、問いの編集装置として使う。
-> それがこのリポジトリの芯です。
+## 概要
 
----
+本アプリは以下の機能を統合しています。
 
-## これは何か
+1. 日本語ノートから英語プロンプトを生成（Gemini API利用）
+2. 生成結果を句単位で分解し、ラベル・効果・採否を管理
+3. 修正指示を入力し、差分付きで再生成
 
-`Prompt Sketchbook` は次の3つを一体化したアプリです。
-
-1. 日本語ノートを英語プロンプトへ変換（Gemini API利用）
-2. 生成された英文を句単位で分解し、ラベル・効果・採否を可視化
-3. 修正指示を与えて、差分付きで次バージョンを生成
-
-単なる翻訳よりも、**「どの句が、見たい絵にどう効いているか」**の判断を支援します。
+翻訳結果の表示だけでなく、句ごとの採用判断を管理できる点を重視しています。
 
 ---
 
 ## 主な機能
 
 - **プロジェクト管理**
-  - 複数テーマ（制作テーマ）を保持
-  - タイトル、見たいもの（intention）、日本語ノート、履歴を保存
+  - 複数プロジェクトを保持
+  - タイトル、intention（見たいもの）、日本語ノート、履歴を保存
 - **プロンプト生成**
-  - `/api/generate-prompt` で Gemini にJSONスキーマ付きで依頼
-  - 結果を `prompt_en / phrases / summary` 形式で取得
-- **句分解とラベル付け**
-  - 各句にラベル（原文対応 / 翻訳補完 / 表現強化 / 解釈追加 / 分岐語 / 要確認）
-  - `adopted` のON/OFFで採否切り替え
-- **意図（見たいもの）ベース評価**
-  - `contribution_note` と `contribution_level(high/medium/low)` を句ごとに付与
-  - 「貢献度低」フィルタ表示に対応
+  - `POST /api/generate-prompt` で Gemini にリクエスト
+  - レスポンスを `prompt_en / phrases / summary` として取得
+- **句分解とラベル管理**
+  - 各句にラベル（原文対応 / 翻訳補完 / 表現強化 / 解釈追加 / 分岐語 / 要確認）を付与
+  - `adopted` の切り替えで句の採否を管理
+- **intention寄与評価**
+  - `contribution_note` と `contribution_level (high/medium/low)` を句単位で保持
+  - 貢献度フィルタ表示に対応
 - **改稿ワークフロー**
-  - 修正指示テキストから再生成
-  - 追加・削除差分（diff）を返すモードあり
-- **ローカル保存 / 入出力**
-  - LocalStorage保存
-  - JSONエクスポート/インポート
+  - 修正指示から再生成
+  - 改稿タスクで `diff`（追加/削除）を取得
+- **データ保存・移行**
+  - LocalStorageへ保存
+  - JSONエクスポート/インポート対応
 - **モバイルUI**
-  - タブ切り替え + スワイプ操作
+  - タブ切り替えとスワイプ操作に対応
 
 ---
 
 ## 技術スタック
 
 - Node.js (ESM)
-- フロントエンド: Vanilla JS + HTML + CSS
-- バックエンド: `node:http` のシンプルな静的配信 + APIサーバー
-- 生成AI: `@google/genai`
+- フロントエンド: Vanilla JS / HTML / CSS
+- バックエンド: `node:http` ベースの静的配信 + APIエンドポイント
+- 生成AIクライアント: `@google/genai`
 
 ---
 
@@ -58,9 +53,9 @@
 ```text
 .
 ├─ app.js        # フロントエンドロジック（状態管理・UI操作・API呼び出し）
-├─ index.html    # UI本体
+├─ index.html    # UI
 ├─ styles.css    # スタイル
-├─ server.mjs    # 静的配信 + Gemini APIプロキシ
+├─ server.mjs    # 静的ファイル配信 + Gemini API呼び出し
 ├─ package.json
 └─ README.md
 ```
@@ -69,15 +64,15 @@
 
 ## セットアップ
 
-### 1) 依存関係インストール
+### 1. 依存関係のインストール
 
 ```bash
 npm install
 ```
 
-### 2) `.env` を作成
+### 2. `.env` の作成
 
-プロジェクトルートに `.env` を作り、最低限以下を設定してください。
+プロジェクトルートに `.env` を作成し、以下を設定してください。
 
 ```env
 GEMINI_API_KEY=your_api_key_here
@@ -86,15 +81,15 @@ HOST=0.0.0.0
 GEMINI_MODEL=gemini-3.5-flash
 ```
 
-> 補足: APIキーはリクエストヘッダー `x-gemini-api-key` でも上書き可能です。
+補足: `GEMINI_API_KEY` はリクエストヘッダー `x-gemini-api-key` で上書き可能です。
 
-### 3) 起動
+### 3. 起動
 
 ```bash
 npm start
 ```
 
-ブラウザで `http://localhost:3000` を開きます。
+ブラウザで `http://localhost:3000` にアクセスします。
 
 ---
 
@@ -102,44 +97,45 @@ npm start
 
 ### `POST /api/generate-prompt`
 
-入力はJSON。`task` に応じてレスポンス形式が変わります。
+入力はJSONです。`task` に応じてレスポンスの構造が変化します。
 
 - 通常生成: `prompt_en`, `phrases`, `summary`
-- 改稿系タスク（`task === "niji_prompt_revision"`）: 上記 + `diff`
+- 改稿タスク（`task === "niji_prompt_revision"`）: 上記 + `diff`
 
 `phrases[]` の主な要素:
 
 - `phrase`: 英語句
 - `ja`: 和訳/対応
 - `labels[]`: 分類ラベル
-- `effect`: 視覚効果の説明
+- `effect`: 効果説明
 - `note`: 補足
-- `alternatives[]`: 言い換え候補
+- `alternatives[]`: 代替候補
 - `adopted`: 採用フラグ
-- `contribution_note`: 意図への寄与メモ
-- `contribution_level`: `high|medium|low`
+- `contribution_note`: intention寄与メモ
+- `contribution_level`: `high | medium | low`
 
 ---
 
 ## 開発メモ
 
-- `npm run build` は実体ビルドなし（ダミー）
-- `npm run lint` も現状ダミー
-- 実運用に向けては以下の追加を推奨
+- `npm run build`: 現状は no-op
+- `npm run lint`: 現状は no-op
+- 実運用に向けた追加候補
   - 入力バリデーション強化
-  - エラー分類（4xx/5xx）とUIメッセージ整備
-  - テスト（APIスキーマ、状態遷移、UI操作）
-  - レート制限 / 監査ログ
+  - エラーハンドリングの整理（4xx/5xx）
+  - テスト追加（APIスキーマ、状態遷移、UI操作）
+  - レート制限、監査ログ
 
 ---
 
-## 視点の提案
+## 運用方針
 
-このアプリの価値は「英語化」そのものではなく、
-**“採用する語彙の理由を外在化できること”** にあります。
+本アプリは、生成結果の文面品質だけでなく、採用判断の再現性を重視します。
 
-もし「ねおのならこう考えそう」と示唆するなら、
-- 良いプロンプトを作る前に、
-- **何を残し、何を捨てるかの判断軸（意図）を先に固定する**
+推奨フロー:
 
-この順序の反転が、再現性を作ります。
+1. `intention` を先に定義
+2. 句ごとの寄与を確認
+3. `adopted` と修正指示で反復調整
+
+この手順により、プロンプト変更の理由を追跡しやすくなります。
